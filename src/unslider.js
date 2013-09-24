@@ -3,10 +3,10 @@
  */
 
 (function($, f) {
-	var Unslider = function() {
+		var Unslider = function() {
 		//  Object clone
 		var _ = this;
-
+		
 		//  Set some options
 		_.o = {
 			speed: 500,     // animation speed, false for no transition (integer or boolean)
@@ -25,6 +25,10 @@
 			item: '>li',    // slidable items selector
 			easing: 'swing' // easing function to use for animation
 		};
+		var visible = {"float": "left", "position": "relative", "opacity": 1, "zIndex": 2},
+		fadeTime = parseFloat(_.o.speed),
+        hidden = {"float": "none", "position": "absolute", "opacity": 0, "zIndex": 1};
+		
 
 		_.init = function(el, o) {
 			//  Check whether we're passing any options in to Unslider
@@ -42,13 +46,20 @@
 				if (width > _.max[0]) _.max[0] = width;
 				if (height > _.max[1]) _.max[1] = height;
 			});
-
-
+			
 			//  Cached vars
 			var o = _.o,
 				ul = _.ul,
 				li = _.li,
 				len = li.length;
+			var $slide = $(li);
+			
+			$slide
+				.hide()
+				.css(hidden)
+				.eq(0)
+				.css(visible)
+				.show();
 
 			//  Current indeed
 			_.i = 0;
@@ -119,44 +130,65 @@
 
 			return _;
 		};
+		
+		var supportsTransitions = (function () {
+          var docBody = document.body || document.documentElement;
+          var styles = docBody.style;
+          var prop = "transition";
+          if (typeof styles[prop] === "string") {
+            return true;
+          }
+          // Tests for vendor specific prop
+          vendor = ["Moz", "Webkit", "Khtml", "O", "ms"];
+          prop = prop.charAt(0).toUpperCase() + prop.substr(1);
+          var i;
+          for (i = 0; i < vendor.length; i++) {
+            if (typeof styles[vendor[i] + prop] === "string") {
+              return true;
+            }
+          }
+          return false;
+        })();
 
 		//  Move Unslider to a slide index
-		_.to = function(index, callback) {
-			var o = _.o,
-				el = _.el,
-				ul = _.ul,
-				li = _.li,
-				current = _.i,
-				target = li.eq(index);
-
-			//  To slide or not to slide
-			if ((!target.length || index < 0) && o.loop == f) return;
-
-			//  Check if it's out of bounds
-			if (!target.length) index = 0;
-			if (index < 0) index = li.length - 1;
-			target = li.eq(index);
-
-			var speed = callback ? 5 : o.speed | 0,
-				easing = o.easing,
-				obj = {height: target.outerHeight()};
-
-			if (!ul.queue('fx').length) {
-				//  Handle those pesky dots
-				el.find('.dot').eq(index).addClass('active').siblings().removeClass('active');
-
-				el.animate(obj, speed, easing) && ul.animate($.extend({left: '-' + index + '00%'}, obj), speed, easing, function(data) {
-					_.i = index;
-
-					$.isFunction(o.complete) && !callback && o.complete(el);
-				});
-			};
-		};
+		_.to = function (idx) {
+		  var $slide = $(_.li);
+		  console.info(idx);
+		  console.info($slide);
+          // If CSS3 transitions are supported
+          if (supportsTransitions) {
+            $slide              
+              .css(hidden)
+			  .hide()
+              .eq(idx)             
+              .css(visible)
+			  .show();
+            index = idx;
+           
+          // If not, use jQuery fallback
+          } else {
+            $slide
+              .stop()
+              .fadeOut(fadeTime, function () {
+                $(this)                  
+                  .css(hidden)
+                  .css("opacity", 1);
+              })
+              .eq(idx)
+              .fadeIn(fadeTime, function () {
+                $(this)                 
+                  .css(visible);
+                settings.after(idx);
+                index = idx;
+              });
+          }
+        };
 
 		//  Autoplay functionality
 		_.play = function() {
 			_.t = setInterval(function() {
-				_.to(_.i + 1);
+				_.to(_.i);
+				_.i = _.i + 1 < _.li.length ? _.i + 1 : 0;
 			}, _.o.delay | 0);
 		};
 
@@ -210,4 +242,5 @@
 			me.data(key, instance).data('key', key);
 		});
 	};
+	
 })(jQuery, false);
